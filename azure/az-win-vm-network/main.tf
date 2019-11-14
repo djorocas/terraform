@@ -14,7 +14,7 @@ resource "azurerm_virtual_network" "az_vnet" {
  name                = var.az_vnet_name
  address_space       = ["10.0.0.0/16"]
  location            = var.az_location
- resource_group_name = azurerm_resource_group.devops_rg.name
+ resource_group_name = "${azurerm_resource_group.devops_rg.name}"
  tags                = var.az_tags
 }
 
@@ -40,8 +40,8 @@ resource "azurerm_network_security_group" "az_nsg" {
 
 resource "azurerm_subnet" "az_subnet" {
  name                 = var.az_subnet_name
- resource_group_name  = azurerm_resource_group.devops_rg.name
- virtual_network_name = azurerm_virtual_network.az_vnet.name
+ resource_group_name  = "${azurerm_resource_group.devops_rg.name}"
+ virtual_network_name = "${azurerm_virtual_network.az_vnet.name}"
  address_prefix       = "10.0.2.0/24"
 }
 
@@ -51,7 +51,8 @@ resource "azurerm_subnet_network_security_group_association" "nsg_subnet_associa
 }
 
 resource "azurerm_public_ip" "az_pub_ip" {
-  name                = var.az_pub_ip_name
+  count = var.acount
+  name                = "${var.az_pub_ip_name}${count.index}"
   location            = var.az_location
   resource_group_name = "${azurerm_resource_group.devops_rg.name}"
   allocation_method   = "Dynamic"
@@ -60,7 +61,8 @@ resource "azurerm_public_ip" "az_pub_ip" {
 }
 
 resource "azurerm_network_interface" "az_net_interface" {
-  name                = var.az_net_interface_name
+  count = var.acount
+  name                = "${var.az_net_interface_name}${count.index}"
   location            = var.az_location
   resource_group_name = "${azurerm_resource_group.devops_rg.name}"
 
@@ -68,16 +70,17 @@ resource "azurerm_network_interface" "az_net_interface" {
     name                          = var.az_net_interface_ip_config_name
     subnet_id                     = "${azurerm_subnet.az_subnet.id}"
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = "${azurerm_public_ip.az_pub_ip.id}"
+    public_ip_address_id          = element(azurerm_public_ip.az_pub_ip.*.id, count.index)
   }
 }
 
 # Create a Virtual Machine
 resource "azurerm_virtual_machine" "test" {
-    name                              = var.az_vm_name
+    count                             = var.acount
+    name                              = "${var.az_vm_name}${count.index}"
     location                          = var.az_location
     resource_group_name               = "${azurerm_resource_group.devops_rg.name}"
-    network_interface_ids             = ["${azurerm_network_interface.az_net_interface.id}"]
+    network_interface_ids             = [element(azurerm_network_interface.az_net_interface.*.id, count.index)]
     vm_size                           = "Standard_B1ms"
     delete_os_disk_on_termination     = true
     delete_data_disks_on_termination  = true
@@ -91,7 +94,7 @@ resource "azurerm_virtual_machine" "test" {
     }
 
     storage_os_disk {
-      name              = var.vm_storage_os_disk_name
+      name              = "${var.vm_storage_os_disk_name}${count.index}"
       caching           = "ReadWrite"
       create_option     = "FromImage"
       managed_disk_type = "Standard_LRS"
@@ -113,6 +116,7 @@ resource "azurerm_virtual_machine" "test" {
     }
 }
 
+/*
 module "iis-install" {
   source  = "ghostinthewires/iis-install/azurerm"
   version = "1.0.2"
@@ -120,3 +124,4 @@ module "iis-install" {
   vmname = "${azurerm_virtual_machine.test.name}"
   location = "${azurerm_resource_group.devops_rg.location}"
 }
+*/

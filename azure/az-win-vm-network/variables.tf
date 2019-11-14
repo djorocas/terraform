@@ -80,3 +80,7 @@ variable "VM_PASSWORD" {
   description = "Azure VM password"
   default = "a7G6}WVT7zV.e+N"
 }
+
+variable "acount" {
+  default = 2
+}
